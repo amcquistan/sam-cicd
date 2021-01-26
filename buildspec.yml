@@ -1,0 +1,18 @@
+version: 0.2
+phases:
+  install:
+    runtime-versions:
+      python: 3.8
+  commands:
+    - echo Started build `date`
+    - pip install pytest
+    - pip install pytest-mock
+  build:
+    commands:
+      - ./deploy.sh
+  post_build:
+    commands:
+      - echo Completed build `date`
+artifacts:
+  files:
+    - test-report.txt

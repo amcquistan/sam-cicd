@@ -43,6 +43,8 @@ Template selection: 1
 Replace the SAM project's template.yaml with the following.
 
 ```
+# template.yaml
+
 AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
 Description: >
@@ -53,11 +55,27 @@ Description: >
 Globals:
   Function:
     Timeout: 30
+    Runtime: python3.8
+
+Parameters:
+  EnvType:
+    Type: String
+    Description: Target execution environment type
+    AllowedValues:
+      - dev
+      - test
+      - prod
+    Default: prod
 
 Resources:
   RandomNumberFunction:
     Type: AWS::Serverless::Function
     Properties:
+      CodeUri: random_numbers/
+      Handler: app.lambda_handler
+      Environment:
+        Variables:
+          ENV_TYPE: !Ref EnvType
       Events:
         RandomNumberApi:
           Type: Api
@@ -82,6 +100,8 @@ mv hello_world random_numbers # or for windows use rename hello_world random_num
 Replace the app.py file within the renamed random_numbers directory with the following.
 
 ```
+# app.py
+
 import os
 import json
 import logging
@@ -166,6 +186,8 @@ def lambda_handler(event, context):
 Replace the test_handler.py file inside the tests/unit directory with the following.
 
 ```
+# test_handler.py
+
 import json
 
 import pytest
@@ -313,7 +335,6 @@ def test_lambda_handler_fail(apigw_event_bad, mocker):
 
     assert ret["statusCode"] == 400
     assert isinstance(data, str)
-
 ```
 
 You can run the tests locally to make sure they are working as expected. First, I like to always setup a local virtual environment for safely managing my Python dependencies.
@@ -360,4 +381,60 @@ git init
 git remote add origin https://github.com/amcquistan/sam-cicd.git
 git add .
 git commit -m 'initial commit'
+git push origin master
 ```
+
+For workflow purposes I will create a new branch named dev.
+
+```
+git checkout -b dev
+git push origin dev
+```
+
+### Code
+
+Create a Bucket for CodePipeline (you can substitute another region that fits your location better).
+
+```
+aws s3 mb s3://my-sam-cicd --region us-east-2
+```
+
+Then in the AWS console navigate to the CodePipeline page and click Create Pipeline button. 
+
+Step 1: Choose pipeline settings
+
+Enter a name for the pipeline, select a service role option, expand advanced settings and select the bucket that was just previously made then click next.
+
+<img src="./codepipeline-step-one-dev.png">
+
+Step 2: Add source stage
+
+For source provider select GitHub (Version 2) then click Connect to GitHub button. A new browser dialog will popup and you can enter a name for the connection to GitHub then click connect to GitHub. This will redirect you to a GitHub login screen where you enter your credentials. After authenticating with GitHub you will be prompted to Install a new App. Follow the screen prompts to setup a new app selecting the account and repo that was created in the last section then click connect.
+
+<img src="./codepipeline-step-two-dev-connect-to-github.png">
+
+For the remaining settings on the source step select the newly created GitHub repo and the dev branch. Then select CodePipeline default as well as Start the pipeline on source code change then click next.
+
+<img src="./codepipeline-step-two-dev-complete.png">
+
+Step 3: Add build stage
+
+For the build stage step select AWS CodeBuild from the build provider dropdown then click the Create Project button. Again, a new browser dialog will popup and you can use the new window to define your CodeBuild project. Git the project a name, select managed image, with Amazon Linux 2 operating system, standard runtime, and aws/codebuild/amazonlinux2_x86_64-standard:3.0 Image. Leave the default New Service Role tile selected.
+
+<img src="./codepipeline-step-three-dev-codebuild1.png">
+
+Scroll down to the Environment Variables section and add the following environment variables (be sure to use s3 bucket name and region appropriate for you).
+
+* ENV_TYPE = dev
+* S3_BUCKET = my-packaging-bucket-name
+* REGION = us-east-2
+
+<img src="./codepipeline-step-three-dev-codebuild2.png">
+
+You can leave the remaining selections as the default and click Continue to CodePipeline at the bottom of the screen.
+
+The AWS Console will redirect back to the Add build stage step and you can click next.
+
+Step 4: Add deploy stage
+
+Step 5: Review

@@ -1,14 +1,11 @@
+# template.yaml
+
 AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
 Description: >
   python3.8
 
   Sample SAM Template for sam-cicd
-
-Globals:
-  Function:
-    Timeout: 30
-    Runtime: python3.8
 
 Parameters:
   EnvType:
@@ -19,6 +16,17 @@ Parameters:
       - test
       - prod
     Default: prod
+
+Conditions:
+  IsProd: !Equals
+    - !Ref EnvType
+    - prod
+
+Globals:
+  Function:
+    Timeout: 30
+    Runtime: python3.8
+    AutoPublishAlias: live
 
 Resources:
   RandomNumberFunction:
@@ -36,7 +44,42 @@ Resources:
             Path: /random-numbers
             Method: post
 
+  RandomNumberFunctionLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName:
+        Fn::Join:
+          - ''
+          - - /aws/lambda/
+            - Ref: RandomNumberFunction
+      RetentionInDays: 14
+
+  RandomNumberFunctionAliasErrorAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      MetricName: Errors
+      Namespace: "AWS/Lambda"
+      ComparisonOperator: GreaterThanThreshold
+      EvaluationPeriods: 1
+      Period: 60
+      Statistic: Sum
+      Threshold: 2
+      AlarmDescription: Fire alarm if more than 3 errors occur in any 60 second period
+      Dimensions:
+        - Name: Resource
+          Value: !Sub "${RandomNumberFunction}:live"
+        - Name: FunctionName
+          Value: !Ref RandomNumberFunction
+      # AlarmActions:
+      #   - ARN 1
+      #   - ARN 2
+      # Actions to take when transition back to ok state
+      # OKActions: 
+      #   - ARN 1
+      #   - ARN 2
+      TreatMissingData: notBreaching
+
 Outputs:
   RandomNumberApi:
     Description: "API Gateway endpoint URL for Prod stage for Random Number function"
-    Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/random-number"
+    Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/random-numbers"
