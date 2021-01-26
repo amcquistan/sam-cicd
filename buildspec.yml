@@ -9,9 +9,10 @@ phases:
     - pip install pytest-mock
   build:
     commands:
-      - ./deploy.sh
+      - ./run-tests.sh
   post_build:
     commands:
+      - ./deploy.sh
       - echo Completed build `date`
 artifacts:
   files:

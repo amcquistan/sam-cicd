@@ -39,7 +39,7 @@ if [[ -z $S3_PREFIX ]]; then
   exit 1
 fi
 
-python -m pytest tests/ -v > test-report.txt
+
 
 sam build && sam deploy --stack-name $STACK_NAME --s3-bucket $S3_BUCKET --s3-prefix $S3_PREFIX \
   --parameter-overrides EnvType=$ENV_TYPE \
