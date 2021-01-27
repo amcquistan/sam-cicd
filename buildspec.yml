@@ -3,9 +3,9 @@ phases:
   install:
     runtime-versions:
       python: 3.8
-  commands:
-    - echo Started build `date`
-    - pip install pytest pytest-mock
+    commands:
+      - echo Started build `date`
+      - pip install pytest pytest-mock
   build:
     commands:
       - ./run-tests.sh
