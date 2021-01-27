@@ -5,8 +5,7 @@ phases:
       python: 3.8
   commands:
     - echo Started build `date`
-    - pip install pytest
-    - pip install pytest-mock
+    - pip install pytest pytest-mock
   build:
     commands:
       - ./run-tests.sh
